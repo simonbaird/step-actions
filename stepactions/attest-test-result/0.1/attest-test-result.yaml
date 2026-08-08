@@ -38,7 +38,7 @@ spec:
         JSON object with "uri" and "digest" fields referencing the pushed
         attestation. Tekton Chains uses this to include the attestation in
         SLSA provenance.
-  image: quay.io/conforma/attest-test-result:0.1
+  image: quay.io/sbaird/attest-test-result:0.1
   env:
     - name: IMAGE_URL
       value: $(params.image-url)
