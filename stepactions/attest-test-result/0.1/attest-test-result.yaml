@@ -32,6 +32,13 @@ spec:
       type: string
       description: In-toto predicate type URI
       default: "https://in-toto.io/attestation/test-result/v0.1"
+    - name: registry-config
+      type: string
+      description: >-
+        Path to a docker config JSON file with push credentials. When set,
+        oras uses this instead of the default merged credentials. Needed
+        when multiple SA secrets conflict during Tekton credential merging.
+      default: ""
   results:
     - name: TEST_OUTPUT_ARTIFACT_OUTPUTS
       description: >-
@@ -50,6 +57,8 @@ spec:
       value: $(params.test-output)
     - name: PREDICATE_TYPE
       value: $(params.predicate-type)
+    - name: REGISTRY_CONFIG
+      value: $(params.registry-config)
   script: |
     #!/usr/bin/env bash
     set -euo pipefail
@@ -137,8 +146,15 @@ spec:
 
     # Attach the attestation as an OCI referrer using oras
     echo "=== Attaching Attestation ==="
+    ORAS_ARGS=()
+    if [ -n "${REGISTRY_CONFIG}" ] && [ -f "${REGISTRY_CONFIG}" ]; then
+      echo "Using registry config: ${REGISTRY_CONFIG}"
+      ORAS_ARGS+=(--registry-config "${REGISTRY_CONFIG}")
+    fi
+
     ORAS_OUTPUT=$(mktemp)
     if ! oras attach --debug \
+      "${ORAS_ARGS[@]}" \
       --artifact-type "${ARTIFACT_TYPE}" \
       --annotation "predicateType=${PREDICATE_TYPE}" \
       --annotation "testName=${TEST_NAME}" \
@@ -159,7 +175,7 @@ spec:
     # Discover the attestation digest
     echo "=== Discovering Attestation Digest ==="
 
-    ATTESTATION_DIGEST=$(oras discover "${IMAGE_REF}" \
+    ATTESTATION_DIGEST=$(oras discover "${ORAS_ARGS[@]}" "${IMAGE_REF}" \
       --artifact-type "${ARTIFACT_TYPE}" \
       --format json 2>/dev/null \
       | jq -r '.manifests[0].digest // empty' || true)
