@@ -111,16 +111,48 @@ spec:
     jq '.' "${STATEMENT_FILE}"
     echo ""
 
+    # Debug: show what credentials oras will use
+    echo "=== Debug: Credential Info ==="
+    echo "HOME=${HOME}"
+    echo "DOCKER_CONFIG=${DOCKER_CONFIG:-unset}"
+    echo "Docker config locations:"
+    for f in "${HOME}/.docker/config.json" "${HOME}/.dockercfg" "/run/secrets/kubernetes.io/dockerconfigjson/.dockerconfigjson" "${DOCKER_CONFIG:-/nonexistent}/config.json"; do
+      if [ -f "$f" ]; then
+        echo "  Found: $f"
+        jq -r '.auths // {} | keys[] | "    registry: " + .' "$f" 2>/dev/null || echo "    (not json)"
+      fi
+    done
+    echo "Tekton creds dir:"
+    ls -laR /tekton/creds/ 2>/dev/null || echo "  /tekton/creds/ not found"
+    echo ""
+    echo "Credential details for target image:"
+    echo "  IMAGE_URL: ${IMAGE_URL}"
+    jq -r '.auths | to_entries[] | select(.key | contains("cli-main") or contains("rhtap-contract-tenant")) | "\(.key): \(.value.auth)"' /root/.docker/config.json 2>/dev/null | while read -r line; do
+      reg="${line%%: *}"
+      auth="${line##*: }"
+      username=$(echo "${auth}" | base64 -d 2>/dev/null | cut -d: -f1)
+      echo "  ${reg} -> username=${username}"
+    done
+    echo ""
+
     # Attach the attestation as an OCI referrer using oras
     echo "=== Attaching Attestation ==="
-    oras attach \
+    ORAS_OUTPUT=$(mktemp)
+    if ! oras attach --debug \
       --artifact-type "${ARTIFACT_TYPE}" \
       --annotation "predicateType=${PREDICATE_TYPE}" \
       --annotation "testName=${TEST_NAME}" \
       --annotation "org.opencontainers.image.created=${TIMESTAMP}" \
       --disable-path-validation \
       "${IMAGE_REF}" \
-      "${STATEMENT_FILE}:application/json"
+      "${STATEMENT_FILE}:application/json" 2>&1 | tee "${ORAS_OUTPUT}"; then
+      echo "=== oras attach FAILED ==="
+      cat "${ORAS_OUTPUT}"
+      rm -f "${ORAS_OUTPUT}"
+      exit 1
+    fi
+    echo "=== oras attach SUCCEEDED ==="
+    rm -f "${ORAS_OUTPUT}"
 
     echo ""
 
