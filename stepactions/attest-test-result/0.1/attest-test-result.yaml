@@ -143,7 +143,7 @@ spec:
     ATTESTATION_DIGEST=$(oras discover --debug "${IMAGE_REF}" \
       --artifact-type "${ARTIFACT_TYPE}" \
       --format json \
-      | yq -p json -r '.manifests[0].digest // ""' || true)
+      | yq -p json -o json -r '.manifests[0].digest // ""' || true)
 
     if [ -z "${ATTESTATION_DIGEST}" ]; then
       echo "ERROR: Could not discover attestation digest from registry"
