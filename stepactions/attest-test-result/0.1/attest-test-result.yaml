@@ -140,10 +140,10 @@ spec:
 
     # No registry-config needed here — the registry is publicly readable,
     # and the push-only credential can cause auth failures on read operations.
-    ATTESTATION_DIGEST=$(oras discover --debug "${IMAGE_REF}" \
+    ATTESTATION_DIGEST=$(oras discover "${IMAGE_REF}" \
       --artifact-type "${ARTIFACT_TYPE}" \
       --format json \
-      | yq -p json -o json -r '.manifests[0].digest // ""' || true)
+      | yq -p json -o json -r '.referrers[0].digest // ""' || true)
 
     if [ -z "${ATTESTATION_DIGEST}" ]; then
       echo "ERROR: Could not discover attestation digest from registry"
