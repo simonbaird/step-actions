@@ -138,16 +138,12 @@ spec:
     # Discover the attestation digest
     echo "=== Discovering Attestation Digest ==="
 
-    DISCOVER_OUTPUT=$(mktemp)
     # No registry-config needed here — the registry is publicly readable,
     # and the push-only credential can cause auth failures on read operations.
-    oras discover --debug "${IMAGE_REF}" \
+    ATTESTATION_DIGEST=$(oras discover --debug "${IMAGE_REF}" \
       --artifact-type "${ARTIFACT_TYPE}" \
-      --format json > "${DISCOVER_OUTPUT}" 2>&1 || true
-    echo "oras discover output:"
-    cat "${DISCOVER_OUTPUT}"
-    ATTESTATION_DIGEST=$(yq -p json -r '.manifests[0].digest // ""' "${DISCOVER_OUTPUT}" || true)
-    rm -f "${DISCOVER_OUTPUT}"
+      --format json \
+      | yq -p json -r '.manifests[0].digest // ""' || true)
 
     if [ -z "${ATTESTATION_DIGEST}" ]; then
       echo "ERROR: Could not discover attestation digest from registry"
