@@ -139,7 +139,9 @@ spec:
     echo "=== Discovering Attestation Digest ==="
 
     DISCOVER_OUTPUT=$(mktemp)
-    oras discover --debug "${ORAS_ARGS[@]}" "${IMAGE_REF}" \
+    # No registry-config needed here — the registry is publicly readable,
+    # and the push-only credential can cause auth failures on read operations.
+    oras discover --debug "${IMAGE_REF}" \
       --artifact-type "${ARTIFACT_TYPE}" \
       --format json > "${DISCOVER_OUTPUT}" 2>&1 || true
     echo "oras discover output:"
