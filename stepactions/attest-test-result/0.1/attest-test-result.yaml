@@ -144,7 +144,7 @@ spec:
       --format json > "${DISCOVER_OUTPUT}" 2>&1 || true
     echo "oras discover output:"
     cat "${DISCOVER_OUTPUT}"
-    ATTESTATION_DIGEST=$(yq -p json -r '.manifests[0].digest // ""' "${DISCOVER_OUTPUT}" 2>/dev/null || true)
+    ATTESTATION_DIGEST=$(yq -p json -r '.manifests[0].digest // ""' "${DISCOVER_OUTPUT}" || true)
     rm -f "${DISCOVER_OUTPUT}"
 
     if [ -z "${ATTESTATION_DIGEST}" ]; then
